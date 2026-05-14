@@ -234,7 +234,7 @@ export default function DataInputScreen({ onSubmit }: { onSubmit: (data: AppData
   }
 
   function handleNext() {
-    const validators = [null, validateStep1, validateStep2, validateStep3, validateStep4];
+    const validators = [null, validateStep1, validateStep2, validateStep4];
     const ok = validators[step]?.();
     if (ok) { setErrors({}); setStep(s => s + 1); }
   }
@@ -245,27 +245,14 @@ export default function DataInputScreen({ onSubmit }: { onSubmit: (data: AppData
     if (!validateStep5()) return;
 
     const cm = form.currentMonthIndex;
-    const cq = Math.floor(cm / 3);
 
-    let monthlyData: MonthlyData[];
-    if (form.performanceMode === 'monthly') {
-      monthlyData = MONTH_NAMES.map((month, i) => ({
-        month, monthIndex: i,
-        target:   parseFloat(form.monthlyTargets[i]) || 0,
-        achieved: i < cm ? (parseFloat(form.monthlyAchieved[i]) || 0) : 0,
-        isProjected: i >= cm,
-      }));
-    } else {
-      monthlyData = MONTH_NAMES.map((month, i) => {
-        const qi = Math.floor(i / 3);
-        return {
-          month, monthIndex: i,
-          target:   (parseFloat(form.quarterlyTargets[qi]) || 0) / 3,
-          achieved: qi < cq ? (parseFloat(form.quarterlyAchieved[qi]) || 0) / 3 : 0,
-          isProjected: qi >= cq,
-        };
-      });
-    }
+    const monthlyTarget = (parseFloat(form.yearlyTarget) || 0) / 12;
+    const monthlyData: MonthlyData[] = MONTH_NAMES.map((month, i) => ({
+      month, monthIndex: i,
+      target: monthlyTarget,
+      achieved: 0,
+      isProjected: i >= cm,
+    }));
 
     const quarters: QuarterData[] = Q_DEFS.map(([q, months]) => {
       const target   = months.reduce((s, mi) => s + monthlyData[mi].target, 0);
@@ -317,7 +304,7 @@ export default function DataInputScreen({ onSubmit }: { onSubmit: (data: AppData
   }
 
   // ── step indicator ───────────────────────────────────────────────────────
-  const STEP_LABELS = ['Team Targets','Your Profile','Performance','Projects','Activity'];
+  const STEP_LABELS = ['Team Targets','Your Profile','Projects','Activity'];
   const TOTAL = STEP_LABELS.length;
 
   return (
@@ -428,7 +415,9 @@ export default function DataInputScreen({ onSubmit }: { onSubmit: (data: AppData
                             <td className="px-3 py-2 text-center">
                               <span className={`font-semibold ${annual > 0 ? 'text-gray-800' : 'text-gray-300'}`}>
                                 {annual > 0
-                                  ? annual >= 1_000_000 ? `$${(annual/1_000_000).toFixed(1)}M` : `$${(annual/1000).toFixed(0)}k`
+                                  ? annual >= 1_000_000 ? `$${(annual/1_000_000).toFixed(1)}M`
+                                    : annual >= 1000 ? `$${(annual/1000).toFixed(0)}k`
+                                    : `$${annual.toFixed(0)}`
                                   : '—'}
                               </span>
                             </td>
@@ -489,114 +478,8 @@ export default function DataInputScreen({ onSubmit }: { onSubmit: (data: AppData
               </div>
             )}
 
-            {/* ── Step 3: Performance ── */}
+            {/* ── Step 3: Projects ── */}
             {step === 3 && (
-              <div>
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Performance View</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      Enter targets + actuals for past {form.performanceMode === 'monthly' ? 'months' : 'quarters'}
-                    </p>
-                  </div>
-                  <ModeToggle value={form.performanceMode} onChange={v => patch({ performanceMode: v })} />
-                </div>
-
-                {Object.keys(errors).some(k => k.startsWith('mt') || k.startsWith('ma') || k.startsWith('qt') || k.startsWith('qa')) && (
-                  <p className="text-xs text-red-600 mb-3">Fill in all highlighted required fields.</p>
-                )}
-
-                {/* Monthly table */}
-                {form.performanceMode === 'monthly' && (
-                  <div className="rounded-xl border border-gray-200 overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 w-20">Month</th>
-                          <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500">Target (USD)</th>
-                          <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500">Achieved (USD)</th>
-                          <th className="w-20 px-3 py-2.5"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {MONTH_NAMES.map((month, i) => {
-                          const isPast    = i < form.currentMonthIndex;
-                          const isCurrent = i === form.currentMonthIndex;
-                          return (
-                            <tr key={i} className={`border-b border-gray-100 last:border-0 ${isCurrent ? 'bg-blue-50/50' : ''}`}>
-                              <td className="px-4 py-1.5">
-                                <span className="font-medium text-gray-700 text-xs">{month}</span>
-                                {isCurrent && <span className="ml-1 text-[10px] text-blue-600 font-semibold bg-blue-100 px-1 py-0.5 rounded">Now</span>}
-                              </td>
-                              <td className="px-3 py-1.5">
-                                <TInput value={form.monthlyTargets[i]} onChange={v => setMT(i, v)} error={!!errors[`mt${i}`]} />
-                              </td>
-                              <td className="px-3 py-1.5">
-                                {isPast
-                                  ? <TInput value={form.monthlyAchieved[i]} onChange={v => setMA(i, v)} error={!!errors[`ma${i}`]} />
-                                  : <span className="text-xs text-gray-400 italic pl-1">{isCurrent ? 'In progress' : 'Projected'}</span>}
-                              </td>
-                              <td className="px-3 py-1.5 text-right">
-                                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                                  isPast ? 'bg-gray-100 text-gray-500' : isCurrent ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-400'
-                                }`}>{isPast ? 'Past' : isCurrent ? 'Current' : 'Future'}</span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {/* Quarterly table */}
-                {form.performanceMode === 'quarterly' && (
-                  <div className="rounded-xl border border-gray-200 overflow-hidden">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 w-20">Quarter</th>
-                          <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500">Target (USD)</th>
-                          <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-500">Achieved (USD)</th>
-                          <th className="w-20 px-3 py-2.5"></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {QUARTER_NAMES.map((quarter, i) => {
-                          const cq        = Math.floor(form.currentMonthIndex / 3);
-                          const isPast    = i < cq;
-                          const isCurrent = i === cq;
-                          return (
-                            <tr key={i} className={`border-b border-gray-100 last:border-0 ${isCurrent ? 'bg-blue-50/50' : ''}`}>
-                              <td className="px-4 py-2">
-                                <span className="font-semibold text-gray-700 text-sm">{quarter}</span>
-                                {isCurrent && <span className="ml-2 text-[10px] text-blue-600 font-semibold bg-blue-100 px-1.5 py-0.5 rounded">Now</span>}
-                              </td>
-                              <td className="px-3 py-2">
-                                <TInput value={form.quarterlyTargets[i]} onChange={v => setQT(i, v)} error={!!errors[`qt${i}`]} />
-                              </td>
-                              <td className="px-3 py-2">
-                                {isPast
-                                  ? <TInput value={form.quarterlyAchieved[i]} onChange={v => setQA(i, v)} error={!!errors[`qa${i}`]} />
-                                  : <span className="text-xs text-gray-400 italic pl-1">{isCurrent ? 'In progress' : 'Projected'}</span>}
-                              </td>
-                              <td className="px-3 py-2 text-right">
-                                <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                                  isPast ? 'bg-gray-100 text-gray-500' : isCurrent ? 'bg-blue-100 text-blue-600' : 'bg-gray-50 text-gray-400'
-                                }`}>{isPast ? 'Past' : isCurrent ? 'Current' : 'Future'}</span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* ── Step 4: Projects ── */}
-            {step === 4 && (
               <div className="space-y-4">
                 <p className="text-xs text-gray-500">
                   Add the projects you are working on with their cost. You can add as many as needed — this step is optional.
@@ -661,8 +544,8 @@ export default function DataInputScreen({ onSubmit }: { onSubmit: (data: AppData
               </div>
             )}
 
-            {/* ── Step 5: Activity ── */}
-            {step === 5 && (
+            {/* ── Step 4: Activity ── */}
+            {step === 4 && (
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Monthly Activity</h3>
