@@ -1,100 +1,80 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from 'react';
+import { CurrencyCode } from '@/lib/types';
+import { recentDeals } from '@/lib/data';
+import Header from '@/components/dashboard/Header';
+import PerformanceSummary from '@/components/dashboard/PerformanceSummary';
+import BusinessUnitSection from '@/components/dashboard/BusinessUnitSection';
+import IndividualTargetSection from '@/components/dashboard/IndividualTargetSection';
+import MonthlyBreakdownSection from '@/components/dashboard/MonthlyBreakdownSection';
+import ForecastSection from '@/components/dashboard/ForecastSection';
+import PipelineSection from '@/components/dashboard/PipelineSection';
+import ActivitySection from '@/components/dashboard/ActivitySection';
+import RecentDealsSection from '@/components/dashboard/RecentDealsSection';
+import DataInputScreen, { AppData } from '@/components/DataInputScreen';
+
+const STORAGE_KEY = 'sales-dashboard-data';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [currency, setCurrency] = useState<CurrencyCode>('USD');
+  const [appData, setAppData] = useState<AppData | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try { setAppData(JSON.parse(saved)); } catch { /* ignore corrupt data */ }
+    }
+    setHydrated(true);
+  }, []);
+
+  function handleDataSubmit(data: AppData) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    setAppData(data);
+  }
+
+  function handleReset() {
+    localStorage.removeItem(STORAGE_KEY);
+    setAppData(null);
+  }
+
+  if (!hydrated) return null;
+
+  if (!appData) {
+    return <DataInputScreen onSubmit={handleDataSubmit} />;
+  }
+
+  const { repData, activityMetrics, pipelineStages } = appData;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header rep={repData} currency={currency} onCurrencyChange={setCurrency} onReset={handleReset} />
+
+      <main className="px-6 lg:px-10 py-8 space-y-6">
+        <PerformanceSummary rep={repData} currency={currency} />
+
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          <PipelineSection stages={pipelineStages} currency={currency} />
+          <ActivitySection metrics={activityMetrics} currency={currency} />
+        </div>
+
+        <BusinessUnitSection rep={repData} currency={currency} />
+        <IndividualTargetSection rep={repData} currency={currency} />
+        <MonthlyBreakdownSection rep={repData} currency={currency} />
+
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+          <div className="xl:col-span-2">
+            <ForecastSection rep={repData} currency={currency} />
+          </div>
+          <div className="xl:col-span-3">
+            <RecentDealsSection deals={recentDeals} currency={currency} />
+          </div>
         </div>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      <footer className="text-center py-6 text-xs text-gray-400 border-t border-gray-200">
+        Sales Dashboard · FY 2024 · {repData.region}
       </footer>
     </div>
   );
