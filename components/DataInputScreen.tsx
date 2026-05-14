@@ -162,16 +162,6 @@ export default function DataInputScreen({ onSubmit }: { onSubmit: (data: AppData
       members: prev.members.map(m => ({ ...m, periodTargets: Array(mode === 'monthly' ? 12 : 4).fill('') })),
     }));
 
-  // ── performance helpers ──────────────────────────────────────────────────
-  const setMT = (i: number, v: string) =>
-    setForm(prev => { const t = [...prev.monthlyTargets]; t[i] = v; return { ...prev, monthlyTargets: t }; });
-  const setMA = (i: number, v: string) =>
-    setForm(prev => { const a = [...prev.monthlyAchieved]; a[i] = v; return { ...prev, monthlyAchieved: a }; });
-  const setQT = (i: number, v: string) =>
-    setForm(prev => { const t = [...prev.quarterlyTargets]; t[i] = v; return { ...prev, quarterlyTargets: t }; });
-  const setQA = (i: number, v: string) =>
-    setForm(prev => { const a = [...prev.quarterlyAchieved]; a[i] = v; return { ...prev, quarterlyAchieved: a }; });
-
   // ── project helpers ──────────────────────────────────────────────────────
   const setProjName = (i: number, v: string) =>
     setForm(prev => { const p = [...prev.projects]; p[i] = { ...p[i], name: v }; return { ...prev, projects: p }; });
@@ -193,24 +183,6 @@ export default function DataInputScreen({ onSubmit }: { onSubmit: (data: AppData
     if (!form.region.trim()) e.region = 'Required';
     const yt = parseFloat(form.yearlyTarget);
     if (!form.yearlyTarget || isNaN(yt) || yt <= 0) e.yearlyTarget = 'Enter a valid amount';
-    setErrors(e); return !Object.keys(e).length;
-  }
-
-  function validateStep3(): boolean {
-    const e: Record<string, string> = {};
-    const cm = form.currentMonthIndex;
-    const cq = Math.floor(cm / 3);
-    if (form.performanceMode === 'monthly') {
-      form.monthlyTargets.forEach((t, i) => { if (!t || isNaN(parseFloat(t))) e[`mt${i}`] = 'req'; });
-      for (let i = 0; i < cm; i++) {
-        if (form.monthlyAchieved[i] === '' || isNaN(parseFloat(form.monthlyAchieved[i]))) e[`ma${i}`] = 'req';
-      }
-    } else {
-      form.quarterlyTargets.forEach((t, i) => { if (!t || isNaN(parseFloat(t))) e[`qt${i}`] = 'req'; });
-      for (let i = 0; i < cq; i++) {
-        if (form.quarterlyAchieved[i] === '' || isNaN(parseFloat(form.quarterlyAchieved[i]))) e[`qa${i}`] = 'req';
-      }
-    }
     setErrors(e); return !Object.keys(e).length;
   }
 
